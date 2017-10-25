@@ -15,12 +15,13 @@ import (
 )
 
 type Session struct {
-	Name       string            `json:"name"`
-	Role       string            `json:"role,omitempty"`
-	Expiration time.Time         `json:"expiration"`
-	AWSCreds   *AWSCredentials   `json:"aws_creds,omitempty"`
-	Vars       map[string]string `json:"vars,omitempty"`
-	SSHKeys    map[string]string `json:"ssh_keys,omitempty"`
+	Name        string              `json:"name"`
+	Role        string              `json:"role,omitempty"`
+	Expiration  time.Time           `json:"expiration"`
+	AWSCreds    *AWSCredentials     `json:"aws_creds,omitempty"`
+	Vars        map[string]string   `json:"vars,omitempty"`
+	SSHKeys     map[string]string   `json:"ssh_keys,omitempty"`
+	SubSessions map[string]*Session `json:"subsessions,omitempty"`
 }
 
 func (e *Session) Assume(arn string) (*Session, error) {
@@ -124,6 +125,39 @@ func (e *Session) Spawn(cmd []string) (*int, error) {
 	// we only return an error if spawning the process failed, not if
 	// the spawned command returned a failure status code.
 	return &exitStatus, nil
+}
+
+func (e *Session) mergeFrom(second Session) *Session {
+	newVars := stringMapMerge(e.Vars, second.Vars)
+	newSSHKeys := stringMapMerge(e.SSHKeys, second.SSHKeys)
+
+	newExpiration := e.Expiration
+	if second.Expiration.Before(newExpiration) {
+		newExpiration = second.Expiration
+	}
+
+	newRole := e.Role
+	if newRole == "" { // Define this behavior
+		newRole = second.Role
+	}
+
+	newName := e.Name + "/" + second.Name
+
+	newSession := &Session{
+		Expiration: newExpiration,
+		Name:       newName,
+		Role:       newRole,
+		SSHKeys:    newSSHKeys,
+		Vars:       newVars,
+	}
+
+	if e.AWSCreds != nil {
+		newSession.AWSCreds = e.AWSCreds
+	} else if second.AWSCreds != nil {
+		newSession.AWSCreds = second.AWSCreds
+	}
+
+	return newSession
 }
 
 func (e *Session) startProxyKeyring() (string, error) {

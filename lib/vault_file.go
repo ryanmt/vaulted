@@ -17,9 +17,10 @@ import (
 type VaultFile struct {
 	Key *VaultKey `json:"key"`
 
-	Method     string  `json:"method"`
-	Details    Details `json:"details,omitempty"`
-	Ciphertext []byte  `json:"ciphertext"`
+	Method     string      `json:"method"`
+	Details    Details     `json:"details,omitempty"`
+	Ciphertext []byte      `json:"ciphertext"`
+	Directory  interface{} `json:"subvaults"` // TODO: Figure out what this should look like to support `vaulted ls -R`
 }
 
 func readVaultFile(name string) (*VaultFile, error) {

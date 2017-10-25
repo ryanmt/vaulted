@@ -109,3 +109,53 @@ func TestSessionVariablesWithTempCreds(t *testing.T) {
 		t.Errorf("Expected: %#v\nGot: %#v\n", expectedUnset, vars.Unset)
 	}
 }
+
+func TestSessionMerge(t *testing.T) {
+	child := Session{
+		Name:       "vault",
+		Expiration: time.Now().Add(time.Hour),
+		Vars: map[string]string{
+			"TEST":         "TESTING",
+			"ANOTHER_TEST": "TEST TEST",
+		},
+	}
+	parent := Session{
+		Name:       "vault2",
+		Expiration: time.Now().Add(time.Minute),
+		AWSCreds: &AWSCredentials{
+			ID:     "an-id",
+			Secret: "the-super-sekrit",
+			Token:  "my-affections",
+		},
+		Vars: map[string]string{
+			"TEST":            "FAIL",
+			"ANOTHER_ANOTHER": "TEST TEST TEST",
+		},
+	}
+
+	resultantSession := child.mergeFrom(parent)
+
+	if resultantSession.Name != child.Name+"/"+parent.Name {
+		t.Error("We got the wrong name!!")
+	}
+
+	if resultantSession.AWSCreds.ID != parent.AWSCreds.ID {
+		t.Error("AWS Creds didn't merge as expected.")
+	}
+	if resultantSession.AWSCreds.Secret != parent.AWSCreds.Secret {
+		t.Error("AWS Creds didn't merge as expected.")
+	}
+	if resultantSession.AWSCreds.Token != parent.AWSCreds.Token {
+		t.Error("AWS Creds didn't merge as expected.")
+	}
+
+	if resultantSession.Vars["ANOTHER_ANOTHER"] != parent.Vars["ANOTHER_ANOTHER"] {
+		t.Error("Vars didn't merge correctly.")
+	}
+	if resultantSession.Vars["TEST"] != child.Vars["TEST"] {
+		t.Error("Vars didn't merge correctly.")
+	}
+	if resultantSession.Vars["TEST"] == parent.Vars["TEST"] {
+		t.Error("Vars didn't merge correctly.")
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/miquella/xdg"
@@ -17,6 +18,7 @@ var (
 	ErrIncorrectPassword       = errors.New("Incorrect password")
 	ErrInvalidKeyConfig        = errors.New("Invalid key configuration")
 	ErrInvalidEncryptionConfig = errors.New("Invalid encryption configuration")
+	ErrSubvaultDoesNotExist    = errors.New("Subvault doesn't exist")
 )
 
 type Store interface {
@@ -81,7 +83,8 @@ func (s *store) VaultExists(name string) bool {
 }
 
 func (s *store) OpenVault(name string) (*Vault, string, error) {
-	if !s.VaultExists(name) {
+	vaultName, _ := s.GetVaultName(name)
+	if !s.VaultExists(vaultName) {
 		return nil, "", os.ErrNotExist
 	}
 
@@ -95,7 +98,7 @@ func (s *store) OpenVault(name string) (*Vault, string, error) {
 			return nil, "", err
 		}
 
-		if v, p, err := s.OpenVaultWithPassword(name, password); err != ErrIncorrectPassword {
+		if v, p, err := s.OpenVaultWithPassword(vaultName, password); err != ErrIncorrectPassword {
 			return v, p, err
 		}
 	}
@@ -250,9 +253,23 @@ func (s *store) CreateSession(name string) (*Session, string, error) {
 }
 
 func (s *store) GetSession(name string) (*Session, string, error) {
-	v, password, err := s.OpenVault(name)
+	vaultName, names := s.GetVaultName(name)
+	vault, password, err := s.OpenVault(vaultName)
 	if err != nil {
 		return nil, "", err
+	}
+	v := vault
+	if len(names) > 1 {
+		vaults, err := s.CrawlVaultPath(vault, names[1:])
+		if err == ErrSubvaultDoesNotExist {
+			return nil, "", fmt.Errorf("Subvault %s not found", name)
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		vaultSet := append([]*Vault{vault}, vaults...)
+
+		v = s.CombineVaults(vaultSet)
 	}
 
 	session, err := s.getSession(v, name, password)
@@ -394,4 +411,37 @@ func (s *store) openSession(name, password string) (*Session, error) {
 	}
 
 	return &session, nil
+}
+
+// From the tail of the set, merge each vault to produce a final
+func (s *store) CombineVaults(vaults []*Vault) *Vault {
+	resultantVault := vaults[len(vaults)-1]
+	for i := len(vaults) - 2; i >= 0; i-- {
+		resultantVault = resultantVault.mergeFrom(*vaults[i])
+	}
+	return resultantVault
+}
+
+// Crawl downward from a provided vault to find and return a set of vaults
+func (s *store) CrawlVaultPath(baseVault *Vault, names []string) ([]*Vault, error) {
+	name, nextNames := names[0], names[1:]
+	nextVault := baseVault.SubVaults[name]
+	if nextVault != nil {
+		if len(nextNames) > 0 {
+			nextSet, err := s.CrawlVaultPath(nextVault, nextNames)
+			if err != nil {
+				return nil, err
+			}
+			return append([]*Vault{nextVault}, nextSet...), nil
+		}
+		return []*Vault{nextVault}, nil
+	}
+	//return nil, fmt.Errorf("Named vault does not exist: ")
+	return nil, ErrSubvaultDoesNotExist
+}
+
+// Return the vault and subvaults from a given name, maybe an argument for moving this to command
+func (s *store) GetVaultName(name string) (string, []string) {
+	names := strings.Split(name, "/")
+	return names[0], names[1:]
 }

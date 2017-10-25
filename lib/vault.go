@@ -17,10 +17,11 @@ var (
 )
 
 type Vault struct {
-	Duration time.Duration     `json:"duration,omitempty"`
-	AWSKey   *AWSKey           `json:"aws_key,omitempty"`
-	Vars     map[string]string `json:"vars,omitempty"`
-	SSHKeys  map[string]string `json:"ssh_keys,omitempty"`
+	Duration  time.Duration     `json:"duration,omitempty"`
+	AWSKey    *AWSKey           `json:"aws_key,omitempty"`
+	Vars      map[string]string `json:"vars,omitempty"`
+	SSHKeys   map[string]string `json:"ssh_keys,omitempty"`
+	SubVaults map[string]*Vault `json:"subvaults,omitempty"`
 }
 
 func (v *Vault) CreateSession(name string) (*Session, error) {
