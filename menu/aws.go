@@ -36,7 +36,7 @@ func (m *AWSMenu) Handler() error {
 		var input string
 		m.Printer()
 		if m.Vault.AWSKey == nil {
-			input, err = interaction.ReadMenu("Edit AWS key [k,?,b,q]: ")
+			input, err = interaction.ReadMenu("Edit AWS key [k,r,?,b,q]: ")
 		} else {
 			input, err = interaction.ReadMenu("Edit AWS key [k,m,r,t,S,D,?,b,q]: ")
 		}
@@ -76,17 +76,21 @@ func (m *AWSMenu) Handler() error {
 					m.Vault.AWSKey.MFA = awsMfa
 				}
 			} else {
-				color.Red("Must associate an AWS key with the vault first")
+				errorColor.Println("Must associate an AWS key with the vault first")
 			}
 		case "r", "role":
-			if m.Vault.AWSKey != nil {
-				var awsRole string
-				awsRole, err = interaction.ReadValue("Role ARN: ")
-				if err == nil {
-					m.Vault.AWSKey.Role = awsRole
+			if m.Vault.AWSKey == nil {
+				m.Vault.AWSKey = &vaulted.AWSKey{
+					AWSCredentials: vaulted.AWSCredentials{},
+					MFA:            "",
+					Role:           "",
+					ForgoTempCredGeneration: false,
 				}
-			} else {
-				color.Red("Must associate an AWS key with the vault first")
+			}
+			var awsRole string
+			awsRole, err = interaction.ReadValue("Role ARN: ")
+			if err == nil {
+				m.Vault.AWSKey.Role = awsRole
 			}
 		case "t", "temp", "temporary":
 			if m.Vault.AWSKey != nil {
@@ -105,7 +109,7 @@ func (m *AWSMenu) Handler() error {
 
 				m.Vault.AWSKey.ForgoTempCredGeneration = forgoTempCredGeneration
 			} else {
-				color.Red("Must associate an AWS key with the vault first")
+				errorColor.Println("Must associate an AWS key with the vault first")
 			}
 		case "S", "show", "hide":
 			m.toggleHidden()
@@ -119,7 +123,7 @@ func (m *AWSMenu) Handler() error {
 					}
 				}
 			} else {
-				color.Red("Must associate an AWS key with the vault first")
+				errorColor.Println("Must associate an AWS key with the vault first")
 			}
 		case "b", "back":
 			return nil
@@ -134,7 +138,7 @@ func (m *AWSMenu) Handler() error {
 		case "?", "help":
 			m.Help()
 		default:
-			color.Red("Command not recognized")
+			errorColor.Println("Command not recognized")
 		}
 
 		if err != nil {

@@ -8,13 +8,15 @@ import (
 )
 
 var (
-	green = color.New(color.FgGreen)
-	cyan  = color.New(color.FgCyan)
-	blue  = color.New(color.FgBlue)
+	green  = color.New(color.FgGreen)
+	cyan   = color.New(color.FgCyan)
+	blue   = color.New(color.FgBlue)
+	yellow = color.New(color.FgHiYellow)
 
 	faintColor   = color.New(color.Faint)
 	menuColor    = color.New(color.FgHiBlue)
 	warningColor = color.New(color.FgHiYellow)
+	errorColor   = color.New(color.FgRed)
 
 	ErrAbort       = errors.New("Aborted by user. Vault unchanged.")
 	ErrSaveAndExit = errors.New("Exiting at user request.")
