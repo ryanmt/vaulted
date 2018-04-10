@@ -75,3 +75,36 @@ func (v *Vault) createSession(name string, credsFunc func(duration time.Duration
 
 	return s, nil
 }
+
+func (v *Vault) mergeFrom(child Vault) *Vault {
+	newVars := stringMapMerge(v.Vars, child.Vars)
+	newSSHKeys := stringMapMerge(v.SSHKeys, child.SSHKeys)
+	newDuration := v.Duration
+	if newDuration > child.Duration {
+		newDuration = child.Duration
+	}
+
+	newVault := &Vault{
+		Duration: newDuration,
+		Vars:     newVars,
+		SSHKeys:  newSSHKeys,
+	}
+
+	if v.AWSKey != nil {
+		newVault.AWSKey = v.AWSKey
+	}
+	if child.AWSKey != nil {
+		newVault.AWSKey = child.AWSKey
+	}
+
+	return newVault
+}
+
+func (v *Vault) subVaultNames(baseName string) []string {
+	outputs := []string{baseName}
+	for svName := range v.SubVaults {
+		prefix := baseName + "/" + svName
+		outputs = append(outputs, v.SubVaults[svName].subVaultNames(prefix)...)
+	}
+	return outputs
+}

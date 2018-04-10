@@ -28,9 +28,9 @@ func TestVaultMerge(t *testing.T) {
 		Role:           "parent_role",
 		ForgoTempCredGeneration: true,
 	}
-	child := Vault{
+	child = Vault{
 		AWSKey:   key,
-		Duration: time.Minute,
+		Duration: time.Hour,
 		SSHKeys: map[string]string{
 			"KEY1": "key1",
 		},
@@ -38,9 +38,14 @@ func TestVaultMerge(t *testing.T) {
 			"TEST": "TESTING",
 		},
 	}
-	parent := Vault{
+
+	childVaultName := "child"
+	subVaults := make(map[string]*Vault)
+	subVaults[childVaultName] = &child
+
+	parent = Vault{
 		AWSKey:   parentKey,
-		Duration: time.Hour,
+		Duration: time.Minute,
 		SSHKeys: map[string]string{
 			"KEY1": "fail",
 			"KEY2": "key2",
@@ -51,9 +56,9 @@ func TestVaultMerge(t *testing.T) {
 		},
 	}
 
-	resultVault := child.mergeFrom(parent)
+	resultVault := parent.mergeFrom(child)
 
-	if resultVault.Duration != child.Duration {
+	if resultVault.Duration != time.Minute {
 		t.Error("Duration should be the shortest value")
 	}
 
@@ -124,5 +129,15 @@ func TestVaultMerge(t *testing.T) {
 	if resultVault.AWSKey != child.AWSKey {
 		t.Error("AWS Key didn't merge as expected.")
 	}
+}
 
+func TestVaultsubVaultNames(t *testing.T) {
+	result := parent.subVaultNames("parent")
+	expectation := []string{"parent", "parent/child"}
+	if result[0] != expectation[0] {
+		t.Error("parent name not properly set")
+	}
+	if result[1] != expectation[1] {
+		t.Error("subvault name not properly set")
+	}
 }

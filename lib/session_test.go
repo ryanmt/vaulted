@@ -133,9 +133,9 @@ func TestSessionMerge(t *testing.T) {
 		},
 	}
 
-	resultantSession := child.mergeFrom(parent)
+	resultantSession := parent.mergeFrom(child)
 
-	if resultantSession.Name != child.Name+"/"+parent.Name {
+	if resultantSession.Name != parent.Name+"/"+child.Name {
 		t.Error("We got the wrong name!!")
 	}
 

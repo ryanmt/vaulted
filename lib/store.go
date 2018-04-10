@@ -259,8 +259,9 @@ func (s *store) GetSession(name string) (*Session, string, error) {
 		return nil, "", err
 	}
 	v := vault
-	if len(names) > 1 {
-		vaults, err := s.CrawlVaultPath(vault, names[1:])
+
+	if len(names) > 0 {
+		vaults, err := s.CrawlVaultPath(vault, names)
 		if err == ErrSubvaultDoesNotExist {
 			return nil, "", fmt.Errorf("Subvault %s not found", name)
 		}
