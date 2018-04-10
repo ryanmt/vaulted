@@ -5,24 +5,31 @@ import (
 	"time"
 )
 
-func TestVaultMerge(t *testing.T) {
-	creds := AWSCredentials{
+var creds AWSCredentials
+var key *AWSKey
+var parentCreds AWSCredentials
+var parentKey *AWSKey
+var child Vault
+var parent Vault
+
+func init() {
+	creds = AWSCredentials{
 		ID:     "an-id",
 		Secret: "the-super-sekrit",
 		Token:  "my-affections",
 	}
-	key := &AWSKey{
+	key = &AWSKey{
 		AWSCredentials: creds,
 		MFA:            "token",
 		Role:           "role",
 		ForgoTempCredGeneration: false,
 	}
-	parentCreds := AWSCredentials{
+	parentCreds = AWSCredentials{
 		ID:     "parent-id",
 		Secret: "parent-sekrit",
 		Token:  "parent-token",
 	}
-	parentKey := &AWSKey{
+	parentKey = &AWSKey{
 		AWSCredentials: parentCreds,
 		MFA:            "parent_token",
 		Role:           "parent_role",
@@ -54,8 +61,11 @@ func TestVaultMerge(t *testing.T) {
 			"TEST":         "FAIL",
 			"ANOTHER_TEST": "TEST TEST TEST",
 		},
+		SubVaults: subVaults,
 	}
+}
 
+func TestVaultMerge(t *testing.T) {
 	resultVault := parent.mergeFrom(child)
 
 	if resultVault.Duration != time.Minute {
@@ -132,7 +142,7 @@ func TestVaultMerge(t *testing.T) {
 }
 
 func TestVaultsubVaultNames(t *testing.T) {
-	result := parent.subVaultNames("parent")
+	result := parent.subVaultNames()
 	expectation := []string{"parent", "parent/child"}
 	if result[0] != expectation[0] {
 		t.Error("parent name not properly set")
