@@ -141,5 +141,8 @@ func (e *Env) getSession(store vaulted.Store) (*vaulted.Session, error) {
 		return session.Assume(e.Role)
 	}
 
+	for subSession := range session.SubSessions {
+	}
+
 	return session, nil
 }
