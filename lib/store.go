@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/miquella/xdg"
@@ -83,7 +82,7 @@ func (s *store) VaultExists(name string) bool {
 }
 
 func (s *store) OpenVault(name string) (*Vault, string, error) {
-	vaultName, _ := s.GetVaultName(name)
+	vaultName, _ := splitNames(name)
 	if !s.VaultExists(vaultName) {
 		return nil, "", os.ErrNotExist
 	}
@@ -253,13 +252,14 @@ func (s *store) CreateSession(name string) (*Session, string, error) {
 }
 
 func (s *store) GetSession(name string) (*Session, string, error) {
-	vaultName, names := s.GetVaultName(name)
+	vaultName, names := splitNames(name)
 	vault, password, err := s.OpenVault(vaultName)
 	if err != nil {
 		return nil, "", err
 	}
 	v := vault
 
+	// This should be done in the session construction, to populate each layer
 	if len(names) > 0 {
 		vaults, err := s.CrawlVaultPath(vault, names)
 		if err == ErrSubvaultDoesNotExist {
@@ -270,10 +270,10 @@ func (s *store) GetSession(name string) (*Session, string, error) {
 		}
 		vaultSet := append([]*Vault{vault}, vaults...)
 
-		v = s.CombineVaults(vaultSet)
+		v = s.CombineVaults(vaultSet) // Only used for the final configuration
 	}
 
-	session, err := s.getSession(v, name, password)
+	session, err := s.getSession(v, vaultName, password)
 	if err != nil {
 		return nil, "", err
 	}
@@ -439,10 +439,4 @@ func (s *store) CrawlVaultPath(baseVault *Vault, names []string) ([]*Vault, erro
 	}
 	//return nil, fmt.Errorf("Named vault does not exist: ")
 	return nil, ErrSubvaultDoesNotExist
-}
-
-// Return the vault and subvaults from a given name, maybe an argument for moving this to command
-func (s *store) GetVaultName(name string) (string, []string) {
-	names := strings.Split(name, "/")
-	return names[0], names[1:]
 }

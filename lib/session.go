@@ -22,11 +22,12 @@ type Session struct {
 	Vars        map[string]string   `json:"vars,omitempty"`
 	SSHKeys     map[string]string   `json:"ssh_keys,omitempty"`
 	SubSessions map[string]*Session `json:"subsessions,omitempty"`
+	// RootSession string              `json:"root"`
 }
 
 func (e *Session) Assume(arn string) (*Session, error) {
 	expiration := e.Expiration
-	maxExpiration := time.Now().Add(time.Hour).Truncate(time.Second)
+	maxExpiration := time.Now().Add(STSDurationDefault).Truncate(time.Second)
 	if expiration.After(maxExpiration) {
 		expiration = maxExpiration
 	}
@@ -38,12 +39,13 @@ func (e *Session) Assume(arn string) (*Session, error) {
 	}
 
 	session := &Session{
-		Name:       e.Name,
-		Role:       arn,
-		Expiration: expiration,
-		AWSCreds:   creds,
-		Vars:       make(map[string]string),
-		SSHKeys:    make(map[string]string),
+		Name:        e.Name,
+		Role:        arn,
+		Expiration:  expiration,
+		AWSCreds:    creds,
+		Vars:        make(map[string]string),
+		SSHKeys:     make(map[string]string),
+		SubSessions: e.SubSessions,
 	}
 	for key, value := range e.Vars {
 		session.Vars[key] = value
@@ -127,34 +129,35 @@ func (e *Session) Spawn(cmd []string) (*int, error) {
 	return &exitStatus, nil
 }
 
-func (e *Session) mergeFrom(second Session) *Session {
-	newVars := stringMapMerge(e.Vars, second.Vars)
-	newSSHKeys := stringMapMerge(e.SSHKeys, second.SSHKeys)
+func (e *Session) mergeFrom(child Session) *Session {
+	newVars := stringMapMerge(e.Vars, child.Vars)
+	newSSHKeys := stringMapMerge(e.SSHKeys, child.SSHKeys)
 
 	newExpiration := e.Expiration
-	if second.Expiration.Before(newExpiration) {
-		newExpiration = second.Expiration
+	if child.Expiration.Before(newExpiration) {
+		newExpiration = child.Expiration
 	}
 
 	newRole := e.Role
 	if newRole == "" { // Define this behavior
-		newRole = second.Role
+		newRole = child.Role
 	}
 
-	newName := e.Name + "/" + second.Name
+	newName := e.Name + "/" + child.Name
 
 	newSession := &Session{
-		Expiration: newExpiration,
-		Name:       newName,
-		Role:       newRole,
-		SSHKeys:    newSSHKeys,
-		Vars:       newVars,
+		Expiration:  newExpiration,
+		Name:        newName,
+		Role:        newRole,
+		SSHKeys:     newSSHKeys,
+		Vars:        newVars,
+		SubSessions: e.SubSessions, // Session is a heirarchy of state, maybe capturing the root isn't enough... we need to know our layer.
 	}
 
 	if e.AWSCreds != nil {
 		newSession.AWSCreds = e.AWSCreds
-	} else if second.AWSCreds != nil {
-		newSession.AWSCreds = second.AWSCreds
+	} else if child.AWSCreds != nil {
+		newSession.AWSCreds = child.AWSCreds
 	}
 
 	return newSession

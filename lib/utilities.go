@@ -1,5 +1,7 @@
 package vaulted
 
+import "strings"
+
 func stringMapMerge(parent map[string]string, child map[string]string) map[string]string {
 	output := make(map[string]string)
 	for k, v := range parent {
@@ -10,4 +12,10 @@ func stringMapMerge(parent map[string]string, child map[string]string) map[strin
 		output[k] = v
 	}
 	return output
+}
+
+// splitNames Return the vault and subvaults from a given name, maybe an argument for moving this to command
+func splitNames(name string) (string, []string) {
+	names := strings.Split(name, "/")
+	return names[0], names[1:]
 }
