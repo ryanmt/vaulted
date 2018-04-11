@@ -69,9 +69,8 @@ var templateFuncMap = template.FuncMap{
 		json, err := json.MarshalIndent(val, "", "  ")
 		if err != nil {
 			return "", err
-		} else {
-			return string(json), nil
 		}
+		return string(json), nil
 	},
 }
 
