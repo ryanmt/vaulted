@@ -76,7 +76,7 @@ func (v *Vault) createSession(name string, credsFunc func(duration time.Duration
 	return s, nil
 }
 
-func (v *Vault) mergeFrom(child Vault) *Vault {
+func (v *Vault) mergeFrom(child *Vault) *Vault {
 	newVars := stringMapMerge(v.Vars, child.Vars)
 	newSSHKeys := stringMapMerge(v.SSHKeys, child.SSHKeys)
 	newDuration := v.Duration

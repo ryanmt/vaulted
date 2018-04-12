@@ -414,13 +414,13 @@ func (s *store) openSession(name, password string) (*Session, error) {
 	return &session, nil
 }
 
-// From the tail of the set, merge each vault to produce a final
+// Merge each vault to produce a final
 func (s *store) CombineVaults(vaults []*Vault) *Vault {
-	resultantVault := vaults[len(vaults)-1]
-	for i := len(vaults) - 2; i >= 0; i-- {
-		resultantVault = resultantVault.mergeFrom(*vaults[i])
+	resultant, children := vaults[0], vaults[1:]
+	for _, child := range children {
+		resultant = resultant.mergeFrom(child)
 	}
-	return resultantVault
+	return resultant
 }
 
 // Crawl downward from a provided vault to find and return a set of vaults
