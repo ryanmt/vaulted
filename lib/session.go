@@ -233,6 +233,16 @@ func (e *Session) buildEnviron(extraVars map[string]string) []string {
 	return environ
 }
 
+func (e *Session) WalkSessionPath(vaultName string, invoker func(session *Session)) *Session {
+	_, names := splitNames(vaultName)
+	finalSession := e
+	for _, name := range names {
+		finalSession = finalSession.SubSessions[name]
+		invoker(finalSession)
+	}
+	return finalSession
+}
+
 type Variables struct {
 	Set   map[string]string
 	Unset []string

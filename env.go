@@ -137,6 +137,13 @@ func (e *Env) getSession(store vaulted.Store) (*vaulted.Session, error) {
 		}
 	}
 
+	assumer := func(session *vaulted.Session) {
+		session.Assume(session.Role)
+	}
+
+	// Walk the sessions, Assuming along the way,
+	session = session.WalkSessionPath(e.VaultName, assumer)
+
 	if e.Role != "" {
 		return session.Assume(e.Role)
 	}

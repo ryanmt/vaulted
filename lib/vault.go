@@ -2,6 +2,7 @@ package vaulted
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -25,33 +26,42 @@ type Vault struct {
 }
 
 func (v *Vault) CreateSession(name string) (*Session, error) {
-	return v.createSession(name, func(duration time.Duration) (*AWSCredentials, error) {
+	return v.createSessionWrapper(name, func(duration time.Duration) (*AWSCredentials, error) {
 		return v.AWSKey.GetAWSCredentials(duration)
 	})
 }
 
 func (v *Vault) CreateSessionWithMFA(name, mfaToken string) (*Session, error) {
-	return v.createSession(name, func(duration time.Duration) (*AWSCredentials, error) {
+	return v.createSessionWrapper(name, func(duration time.Duration) (*AWSCredentials, error) {
 		return v.AWSKey.GetAWSCredentialsWithMFA(mfaToken, duration)
 	})
 }
 
-func (v *Vault) createSession(name string, credsFunc func(duration time.Duration) (*AWSCredentials, error)) (*Session, error) {
-	baseName, names := splitNames(name)
-	baseSession, err := v.constructSession(baseName, credsFunc)
+func (v *Vault) createSessionWrapper(name string, credsFunc func(duration time.Duration) (*AWSCredentials, error)) (*Session, error) {
+	names := strings.Split(name, "/")
+	session, err := v.createSession(names, 1, credsFunc)
+	if err == nil {
+		session.Name = name
+	}
+	return session, err
+}
+
+func (v *Vault) createSession(path []string, cursor int, credsFunc func(duration time.Duration) (*AWSCredentials, error)) (*Session, error) {
+	baseSession, err := v.constructSession(path[0:cursor], credsFunc)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(names) > 0 {
-		subVaultName, nextNames := names[0], names[1:]
+	if len(path) > cursor {
+		subVaultPath, remainingPath := path[0:cursor], path[cursor:]
+		subVaultName := path[cursor]
 		vault := v.mergeFrom(v.SubVaults[subVaultName])
 
 		var newSession *Session
-		if len(nextNames) > 0 {
-			newSession, err = vault.createSession(joinNames(nextNames), credsFunc)
+		if len(remainingPath) > 0 {
+			newSession, err = vault.createSession(path, cursor+1, credsFunc)
 		} else {
-			newSession, err = vault.constructSession(subVaultName, credsFunc)
+			newSession, err = vault.constructSession(subVaultPath, credsFunc)
 		}
 		if err != nil {
 			return nil, err
@@ -63,7 +73,7 @@ func (v *Vault) createSession(name string, credsFunc func(duration time.Duration
 	return baseSession, nil
 }
 
-func (v *Vault) constructSession(name string, credsFunc func(duration time.Duration) (*AWSCredentials, error)) (*Session, error) {
+func (v *Vault) constructSession(path []string, credsFunc func(duration time.Duration) (*AWSCredentials, error)) (*Session, error) {
 	var duration time.Duration
 	if v.Duration == 0 {
 		duration = STSDurationDefault
@@ -73,7 +83,7 @@ func (v *Vault) constructSession(name string, credsFunc func(duration time.Durat
 
 	// For each vault in VaultSet...
 	session := &Session{
-		Name:        name,
+		Name:        joinNames(path),
 		Vars:        make(map[string]string),
 		SubSessions: make(map[string]*Session),
 	}
@@ -97,6 +107,7 @@ func (v *Vault) constructSession(name string, credsFunc func(duration time.Durat
 		if err != nil {
 			return nil, err
 		}
+		session.Role = v.AWSKey.Role
 	}
 
 	// now that the session is generated, set the expiration
