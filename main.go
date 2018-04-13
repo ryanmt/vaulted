@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	// "runtime/pprof"
-	// "runtime/trace"
 
 	"github.com/miquella/vaulted/lib"
 	"github.com/miquella/vaulted/lib/legacy"
@@ -36,25 +34,6 @@ var (
 )
 
 func main() {
-	// Make this configurable
-	// f1, err := os.Create("trace.out")
-	// if err != nil {
-	// panic(err)
-	// }
-	// defer f1.Close()
-	// err = trace.Start(f1)
-	// if err != nil {
-	// panic(err)
-	// }
-	// defer trace.Stop()
-	// f2, err := os.Create("pprof.out")
-	// if err != nil {
-	// panic(err)
-	// }
-	// defer f2.Close()
-	// pprof.StartCPUProfile(f2)
-	// defer pprof.StopCPUProfile()
-
 	command, err := ParseArgs(os.Args[1:])
 	if err == nil {
 		steward := NewSteward()
