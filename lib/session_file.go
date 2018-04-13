@@ -15,6 +15,7 @@ type SessionFile struct {
 }
 
 func readSessionFile(name string) (*SessionFile, error) {
+	name, _ = splitNames(name)
 	existing := xdg.CACHE_HOME.Find(filepath.Join("vaulted", name))
 	if existing == "" {
 		return nil, os.ErrNotExist
@@ -60,6 +61,7 @@ func writeSessionFile(name string, sessionFile *SessionFile) error {
 }
 
 func removeSession(name string) error {
+	name, _ = splitNames(name)
 	existing := xdg.CACHE_HOME.Find(filepath.Join("vaulted", name))
 	if existing == "" {
 		return os.ErrNotExist

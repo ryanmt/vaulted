@@ -24,6 +24,7 @@ type VaultFile struct {
 }
 
 func readVaultFile(name string) (*VaultFile, error) {
+	name, _ = splitNames(name)
 	existing := xdg.DATA.Find(filepath.Join("vaulted", name))
 	if len(existing) == 0 {
 		return nil, os.ErrNotExist
@@ -46,6 +47,7 @@ func readVaultFile(name string) (*VaultFile, error) {
 }
 
 func writeVaultFile(name string, vaultFile *VaultFile) error {
+	name, _ = splitNames(name)
 	pathname := xdg.DATA_HOME.Join("vaulted")
 	err := os.MkdirAll(pathname, 0700)
 	if err != nil {
