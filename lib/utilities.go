@@ -19,3 +19,8 @@ func splitNames(name string) (string, []string) {
 	names := strings.Split(name, "/")
 	return names[0], names[1:]
 }
+
+// joinNames Return the vault and subvaults from a given name, maybe an argument for moving this to command
+func joinNames(names []string) string {
+	return strings.Join(names, "/")
+}

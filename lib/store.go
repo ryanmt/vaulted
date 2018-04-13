@@ -252,34 +252,23 @@ func (s *store) CreateSession(name string) (*Session, string, error) {
 }
 
 func (s *store) GetSession(name string) (*Session, string, error) {
-	vaultName, names := splitNames(name)
-	vault, password, err := s.OpenVault(vaultName)
-	if err != nil {
-		return nil, "", err
-	}
-	v := vault
-
-	// This should be done in the session construction, to populate each layer
-	if len(names) > 0 {
-		vaults, err := s.CrawlVaultPath(vault, names)
-		if err == ErrSubvaultDoesNotExist {
-			return nil, "", fmt.Errorf("Subvault %s not found", name)
-		}
-		if err != nil {
-			return nil, "", err
-		}
-		vaultSet := append([]*Vault{vault}, vaults...)
-
-		v = s.CombineVaults(vaultSet) // Only used for the final configuration
-	}
-
-	session, err := s.getSession(v, vaultName, password)
+	vault, password, err := s.OpenVault(name)
 	if err != nil {
 		return nil, "", err
 	}
 
-	if v.AWSKey != nil && v.AWSKey.Role != "" {
-		session, err = session.Assume(v.AWSKey.Role)
+	// getVaultSet and getSessionSet can be zipped as a combination
+
+	session, err := s.getSession(vault, name, password)
+	// session, err := s.getSession(v, vaultName, password, vaultSet)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if vault.AWSKey != nil && vault.AWSKey.Role != "" {
+		fmt.Println("vault.AWSKey.Role: ", vault.AWSKey.Role)
+		session, err = session.Assume(vault.AWSKey.Role) // Firing off the assume needs to happen inside the layer traversal, so we can chain them
+		fmt.Println("did we assume?")
 		if err != nil {
 			return nil, "", err
 		}
@@ -299,17 +288,17 @@ func (s *store) getSession(v *Vault, name, password string) (*Session, error) {
 	return s.createSession(v, name, password)
 }
 
-func (s *store) createSession(v *Vault, name, password string) (*Session, error) {
+func (s *store) createSession(rootVault *Vault, name, password string) (*Session, error) {
 	var session *Session
 	var err error
-	if v.AWSKey.RequiresMFA() {
+	if rootVault.AWSKey.RequiresMFA() {
 		var mfaToken string
 		mfaToken, err = s.steward.GetMFAToken(name)
 		if err == nil {
-			session, err = v.CreateSessionWithMFA(name, mfaToken)
+			session, err = rootVault.CreateSessionWithMFA(name, mfaToken)
 		}
 	} else {
-		session, err = v.CreateSession(name)
+		session, err = rootVault.CreateSession(name)
 	}
 	if err != nil {
 		return nil, err
@@ -412,31 +401,4 @@ func (s *store) openSession(name, password string) (*Session, error) {
 	}
 
 	return &session, nil
-}
-
-// Merge each vault to produce a final
-func (s *store) CombineVaults(vaults []*Vault) *Vault {
-	resultant, children := vaults[0], vaults[1:]
-	for _, child := range children {
-		resultant = resultant.mergeFrom(child)
-	}
-	return resultant
-}
-
-// Crawl downward from a provided vault to find and return a set of vaults
-func (s *store) CrawlVaultPath(baseVault *Vault, names []string) ([]*Vault, error) {
-	name, nextNames := names[0], names[1:]
-	nextVault := baseVault.SubVaults[name]
-	if nextVault != nil {
-		if len(nextNames) > 0 {
-			nextSet, err := s.CrawlVaultPath(nextVault, nextNames)
-			if err != nil {
-				return nil, err
-			}
-			return append([]*Vault{nextVault}, nextSet...), nil
-		}
-		return []*Vault{nextVault}, nil
-	}
-	//return nil, fmt.Errorf("Named vault does not exist: ")
-	return nil, ErrSubvaultDoesNotExist
 }
