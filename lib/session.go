@@ -129,40 +129,6 @@ func (e *Session) Spawn(cmd []string) (*int, error) {
 	return &exitStatus, nil
 }
 
-func (e *Session) mergeFrom(child Session) *Session {
-	newVars := stringMapMerge(e.Vars, child.Vars)
-	newSSHKeys := stringMapMerge(e.SSHKeys, child.SSHKeys)
-
-	newExpiration := e.Expiration
-	if child.Expiration.Before(newExpiration) {
-		newExpiration = child.Expiration
-	}
-
-	newRole := e.Role
-	if newRole == "" { // Define this behavior
-		newRole = child.Role
-	}
-
-	newName := e.Name + "/" + child.Name
-
-	newSession := &Session{
-		Expiration:  newExpiration,
-		Name:        newName,
-		Role:        newRole,
-		SSHKeys:     newSSHKeys,
-		Vars:        newVars,
-		SubSessions: e.SubSessions, // Session is a heirarchy of state, maybe capturing the root isn't enough... we need to know our layer.
-	}
-
-	if e.AWSCreds != nil {
-		newSession.AWSCreds = e.AWSCreds
-	} else if child.AWSCreds != nil {
-		newSession.AWSCreds = child.AWSCreds
-	}
-
-	return newSession
-}
-
 func (e *Session) startProxyKeyring() (string, error) {
 	keyring, err := NewProxyKeyring(os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {

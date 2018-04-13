@@ -137,26 +137,6 @@ func (v *Vault) subVaultNames(baseName string) []string {
 	return outputs
 }
 
-// This function is returning too much, not the path, but all of the paths
-// func (v *Vault) getVaultSet(name string) ([]*Vault, error) {
-// _, names := splitNames(name)
-// var vaultSet []*Vault
-
-// if len(names) > 0 {
-// var vaults
-// vaults, err := v.crawlVaultPath(names)
-// if err == ErrSubvaultDoesNotExist {
-// return nil, fmt.Errorf("Subvault %s not found", name)
-// }
-// if err != nil {
-// return nil, err
-// }
-// vaultSet = append([]*Vault{v}, vaults...)
-
-// }
-// return vaultSet, nil
-// }
-
 // CombineVaults merge each vault to produce a representation of that vault
 func (v *Vault) CombineVaults(vaults []*Vault) *Vault {
 	resultant, children := vaults[0], vaults[1:]
@@ -164,20 +144,4 @@ func (v *Vault) CombineVaults(vaults []*Vault) *Vault {
 		resultant = resultant.mergeFrom(child)
 	}
 	return resultant
-}
-
-func (v *Vault) crawlVaultPath(names []string, vaultHandler func(vault *Vault, path string) error) ([]*Vault, error) {
-	name, nextNames := names[0], names[1:]
-	nextVault := v.SubVaults[name]
-	if nextVault != nil {
-		if len(nextNames) > 0 {
-			nextSet, err := nextVault.crawlVaultPath(nextNames, vaultHandler)
-			if err != nil {
-				return nil, err
-			}
-			return append([]*Vault{nextVault}, nextSet...), nil
-		}
-		return []*Vault{nextVault}, nil
-	}
-	return nil, ErrSubvaultDoesNotExist
 }
