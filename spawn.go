@@ -57,7 +57,10 @@ func (s *Spawn) getSession(store vaulted.Store) (*vaulted.Session, error) {
 		}
 	}
 
+	// Walk the session tree and assume roles, return the right subsession
+
 	if s.Role != "" {
+		fmt.Println("Assuming... ", s.Role)
 		return session.Assume(s.Role)
 	}
 
