@@ -257,18 +257,13 @@ func (s *store) GetSession(name string) (*Session, string, error) {
 		return nil, "", err
 	}
 
-	// getVaultSet and getSessionSet can be zipped as a combination
-
 	session, err := s.getSession(vault, name, password)
-	// session, err := s.getSession(v, vaultName, password, vaultSet)
 	if err != nil {
 		return nil, "", err
 	}
 
 	if vault.AWSKey != nil && vault.AWSKey.Role != "" {
-		fmt.Println("vault.AWSKey.Role: ", vault.AWSKey.Role)
 		session, err = session.Assume(vault.AWSKey.Role) // Firing off the assume needs to happen inside the layer traversal, so we can chain them
-		fmt.Println("did we assume?")
 		if err != nil {
 			return nil, "", err
 		}
@@ -279,6 +274,7 @@ func (s *store) GetSession(name string) (*Session, string, error) {
 
 func (s *store) getSession(v *Vault, name, password string) (*Session, error) {
 	session, err := s.openSession(name, password)
+
 	if err != nil {
 		removeSession(name)
 	} else if session.Expiration.After(time.Now().Add(15 * time.Minute)) {
@@ -317,7 +313,9 @@ func (s *store) sealSession(session *Session, name, password string) error {
 	}
 
 	// marshal the session content
+
 	content, err := json.Marshal(session)
+
 	if err != nil {
 		return err
 	}

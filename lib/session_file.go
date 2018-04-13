@@ -38,6 +38,7 @@ func readSessionFile(name string) (*SessionFile, error) {
 }
 
 func writeSessionFile(name string, sessionFile *SessionFile) error {
+	name, _ = splitNames(name)
 	pathname := xdg.CACHE_HOME.Join("vaulted")
 	err := os.MkdirAll(pathname, 0700)
 	if err != nil {

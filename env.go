@@ -138,7 +138,9 @@ func (e *Env) getSession(store vaulted.Store) (*vaulted.Session, error) {
 	}
 
 	assumer := func(session *vaulted.Session) {
-		session.Assume(session.Role)
+		if session.Role != "" {
+			session.Assume(session.Role)
+		}
 	}
 
 	// Walk the sessions, Assuming along the way,
